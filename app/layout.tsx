@@ -151,7 +151,20 @@ export default function RootLayout({
               })();
             `,
           }}
-        />
+        /><script src="https://fastly.jsdelivr.net/npm/chinese-s2t@1.0.0/dist/chinese-s2t.js" />
+<script dangerouslySetInnerHTML={{ __html: `
+  (function() {
+    document.addEventListener('input', (e) => {
+      if (e.target.tagName === 'INPUT') {
+        const simplified = ChineseS2T.t2s(e.target.value);
+        if (e.target.value !== simplified) {
+          e.target.value = simplified;
+          e.target.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      }
+    }, true);
+  })();
+` }} />
       </body>
     </html>
   );
