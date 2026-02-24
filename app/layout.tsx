@@ -151,7 +151,34 @@ export default function RootLayout({
               })();
             `,
           }}
-        />
+        /><script src="https://fastly.jsdelivr.net/npm/chinese-s2t@1.0.0/dist/chinese-s2t.js" />
+<script dangerouslySetInnerHTML={{ __html: `
+  (function() {
+    function startConverting() {
+      // 使用事件委託，這樣動態產生的搜尋框也能抓到
+      document.body.addEventListener('input', (e) => {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+          if (typeof ChineseS2T !== 'undefined') {
+            const simplified = ChineseS2T.t2s(e.target.value);
+            if (e.target.value !== simplified) {
+              e.target.value = simplified;
+              // 關鍵：觸發 React/Next.js 的內在狀態更新
+              const event = new Event('input', { bubbles: true });
+              e.target.dispatchEvent(event);
+            }
+          }
+        }
+      }, true);
+    }
+
+    // 確保頁面載入後才執行
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', startConverting);
+    } else {
+      startConverting();
+    }
+  })();
+` }} />
       </body>
     </html>
   );
