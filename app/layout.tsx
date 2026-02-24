@@ -155,21 +155,21 @@ export default function RootLayout({
 <script dangerouslySetInnerHTML={{ __html: `
   (function() {
     function startConverting() {
-      // 使用事件委託，這樣動態產生的搜尋框也能抓到
       document.body.addEventListener('input', (e) => {
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
           if (typeof ChineseS2T !== 'undefined') {
             const simplified = ChineseS2T.t2s(e.target.value);
             if (e.target.value !== simplified) {
-              e.target.value = simplified;
-              // 觸發原生事件讓 React/Next.js 感知到變動
+              // 破解 React 的狀態鎖定 (就像在 C 語言強制操作記憶體位置)
+              const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+              nativeInputValueSetter.call(e.target, simplified);
               e.target.dispatchEvent(new Event('input', { bubbles: true }));
             }
           }
         }
       }, true);
     }
-    // 確保頁面載入後才執行
+    
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', startConverting);
     } else {
