@@ -151,40 +151,71 @@ export default function RootLayout({
               })();
             `,
           }}
-        /><script src="https://fastly.jsdelivr.net/npm/chinese-s2t@1.0.0/dist/chinese-s2t.js" />
-<script dangerouslySetInnerHTML={{ __html: `
-  (function() {
-    // 設置一個計時器等待字體轉換套件載入完成
-    let checkTimer = setInterval(() => {
-      if (typeof ChineseS2T !== 'undefined') {
-        clearInterval(checkTimer);
+        />
         
-        // 攔截網頁底層的 fetch 網路請求 (類似 C 語言的 Hook)
-        const originalFetch = window.fetch;
-        window.fetch = async function(...args) {
-          let url = args[0];
-          
-          // 只有當請求網址包含 'wd=' 或 'keyword=' (代表這是搜尋請求) 時才啟動轉換
-          if (typeof url === 'string' && (url.includes('wd=') || url.includes('keyword='))) {
-            try {
-              // 1. 將網址解碼 (例如 %E5%92%92%E8%A1%93 變成 咒術)
-              let decodedUrl = decodeURI(url);
-              // 2. 轉換為簡體 (變成 咒术)
-              let simplifiedUrl = ChineseS2T.t2s(decodedUrl);
-              // 3. 重新編碼送出
-              args[0] = encodeURI(simplifiedUrl);
-              console.log("已攔截並轉換搜尋請求:", args[0]);
-            } catch (e) {
-              console.error("轉換失敗", e);
+        {/* ================= 終極繁簡轉換 (底層網路與路由攔截) ================= */}
+        <script src="https://fastly.jsdelivr.net/npm/chinese-s2t@1.0.0/dist/chinese-s2t.js" />
+        <script dangerouslySetInnerHTML={{ __html: `
+          (function() {
+            function initS2T() {
+              if (typeof ChineseS2T === 'undefined') {
+                setTimeout(initS2T, 100);
+                return;
+              }
+
+              // 安全轉換網址編碼的函數
+              function convertUrl(url) {
+                if (!url || typeof url !== 'string') return url;
+                try {
+                  let decoded = decodeURI(url);
+                  let simplified = ChineseS2T.t2s(decoded);
+                  return encodeURI(simplified);
+                } catch(e) {
+                  return url;
+                }
+              }
+
+              // 1. 攔截底層 Fetch 請求 (解決 API 搜尋)
+              const originalFetch = window.fetch;
+              window.fetch = async function(...args) {
+                if (typeof args[0] === 'string') {
+                  args[0] = convertUrl(args[0]);
+                }
+                return originalFetch.apply(this, args);
+              };
+
+              // 2. 攔截舊版 XMLHttpRequest
+              const originalOpen = XMLHttpRequest.prototype.open;
+              XMLHttpRequest.prototype.open = function(method, url, ...rest) {
+                if (typeof url === 'string') {
+                  url = convertUrl(url);
+                }
+                return originalOpen.call(this, method, url, ...rest);
+              };
+
+              // 3. 攔截 Next.js 前端路由跳轉 (解決網址列變化)
+              const originalPushState = history.pushState;
+              history.pushState = function(state, unused, url) {
+                if (typeof url === 'string') {
+                  url = convertUrl(url);
+                }
+                return originalPushState.call(this, state, unused, url);
+              };
+
+              const originalReplaceState = history.replaceState;
+              history.replaceState = function(state, unused, url) {
+                if (typeof url === 'string') {
+                  url = convertUrl(url);
+                }
+                return originalReplaceState.call(this, state, unused, url);
+              };
+
+              console.log("🚀 [KVideo] 終極全局繁簡轉換 (底層攔截) 已啟動！");
             }
-          }
-          // 放行請求
-          return originalFetch.apply(this, args);
-        };
-      }
-    }, 200);
-  })();
-` }} />
+            
+            initS2T();
+          })();
+        ` }} />
       </body>
     </html>
   );
