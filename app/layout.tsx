@@ -154,27 +154,35 @@ export default function RootLayout({
         /><script src="https://fastly.jsdelivr.net/npm/chinese-s2t@1.0.0/dist/chinese-s2t.js" />
 <script dangerouslySetInnerHTML={{ __html: `
   (function() {
-    function startConverting() {
-      document.body.addEventListener('input', (e) => {
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
-          if (typeof ChineseS2T !== 'undefined') {
-            const simplified = ChineseS2T.t2s(e.target.value);
-            if (e.target.value !== simplified) {
-              // 破解 React 的狀態鎖定 (就像在 C 語言強制操作記憶體位置)
-              const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
-              nativeInputValueSetter.call(e.target, simplified);
-              e.target.dispatchEvent(new Event('input', { bubbles: true }));
+    // 設置一個計時器等待字體轉換套件載入完成
+    let checkTimer = setInterval(() => {
+      if (typeof ChineseS2T !== 'undefined') {
+        clearInterval(checkTimer);
+        
+        // 攔截網頁底層的 fetch 網路請求 (類似 C 語言的 Hook)
+        const originalFetch = window.fetch;
+        window.fetch = async function(...args) {
+          let url = args[0];
+          
+          // 只有當請求網址包含 'wd=' 或 'keyword=' (代表這是搜尋請求) 時才啟動轉換
+          if (typeof url === 'string' && (url.includes('wd=') || url.includes('keyword='))) {
+            try {
+              // 1. 將網址解碼 (例如 %E5%92%92%E8%A1%93 變成 咒術)
+              let decodedUrl = decodeURI(url);
+              // 2. 轉換為簡體 (變成 咒术)
+              let simplifiedUrl = ChineseS2T.t2s(decodedUrl);
+              // 3. 重新編碼送出
+              args[0] = encodeURI(simplifiedUrl);
+              console.log("已攔截並轉換搜尋請求:", args[0]);
+            } catch (e) {
+              console.error("轉換失敗", e);
             }
           }
-        }
-      }, true);
-    }
-    
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', startConverting);
-    } else {
-      startConverting();
-    }
+          // 放行請求
+          return originalFetch.apply(this, args);
+        };
+      }
+    }, 200);
   })();
 ` }} />
       </body>
