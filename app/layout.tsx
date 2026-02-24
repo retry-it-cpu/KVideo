@@ -162,15 +162,13 @@ export default function RootLayout({
             const simplified = ChineseS2T.t2s(e.target.value);
             if (e.target.value !== simplified) {
               e.target.value = simplified;
-              // 關鍵：觸發 React/Next.js 的內在狀態更新
-              const event = new Event('input', { bubbles: true });
-              e.target.dispatchEvent(event);
+              // 觸發原生事件讓 React/Next.js 感知到變動
+              e.target.dispatchEvent(new Event('input', { bubbles: true }));
             }
           }
         }
       }, true);
     }
-
     // 確保頁面載入後才執行
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', startConverting);
